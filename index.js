@@ -2,12 +2,17 @@ const rp = require('request-promise-native');
 const AWS = require('aws-sdk');
 const documentClient = new AWS.DynamoDB.DocumentClient();
 const TABLE = 'bravobot-scores'
-
-
-
-const make_record = (chan)=>({
-    chan:chan
-})
+const points = {
+    cookie:1,
+    doughnut:1,
+    beer:1,
+    beers:2,
+    donutcoin:1,
+    hankey:-1,
+    shit:-1,
+    poop:-1,
+    lemon:-1
+}
 
 const update_record = (chan, who, how_much) => {
       const params = {
@@ -24,7 +29,6 @@ const update_record = (chan, who, how_much) => {
     return documentClient.update(params).promise()
 }
 
-
 const get_scores = (chan)=>{
     const params = {
         TableName: TABLE,
@@ -38,7 +42,6 @@ const get_scores = (chan)=>{
             return {}
         })
 }
-
 
 const fmt_scores = (scores) => {
     const fmt_score = (x) => ({
@@ -57,7 +60,7 @@ const fmt_scores = (scores) => {
             type: "section",
             text: {
                 type: "mrkdwn",
-                text: `* <#${scores.chan}> scores:* \t :cookie: +1 \t :hankey: -1   `
+                text: `* <#${scores.chan}> scores:* \t :cookie:|:doughnut:|:beer:|:donutcoin: +1 \t :hankey:|:lemon: -1   `
             }
         },
         {
@@ -70,32 +73,27 @@ const fmt_scores = (scores) => {
 
 async function on_mention( e) {
     let scores = await get_scores(e.channel);
-    // if scores is nil, then we create one empty
-    console.log(scores)
     const blocks = fmt_scores(scores)
-    console.log(blocks)
     let text_slack = await post_block(blocks, e.channel);
     return {message:scores}
 }
 
-const actions = {
-    //who did what to who
-       'cookie': (chan, who, to) => update_record(chan, to, 1),
-       'hankey': (chan, who, to) => update_record(chan, to, -1)
-    }
 
-async function on_reaction(e){
+async function on_reaction(e, sign=1){
    const where = e.item.channel
    const who = e.user
    const to = e.item_user
-   const did = await actions[e.reaction](where, who, to)
-   console.log(`${who} did ${e.reaction} to ${to} in ${where}`)
-   return {message:'ok'}
+   const p = points[e.reaction] |0
+   if (!!p){
+       await update_record(where, to, sign*p)
+   }
+   return {message:`${who} gave ${p} to ${to} in ${where}`}
 }
 
 const msg_routes = {
-        'app_mention': on_mention,
-        'reaction_added':on_reaction,
+        'app_mention' : on_mention,
+        'reaction_added' : on_reaction,
+        'reaction_removed': (e) => on_reaction(e, -1)
     }
 
 function post_block(blk,chan){
@@ -115,8 +113,6 @@ function post_msg(msg,chan){
 }
 
 function post_payload(payload) {
-
-    
     const opts = {
         method:'POST',
         uri:'https://slack.com/api/chat.postMessage',
@@ -142,7 +138,6 @@ const build_response = o => ({
     
 exports.handler = async (event) => {
     const slack_raw = JSON.parse(event.body)
-    console.log(slack_raw)
     let resp;
     if ('event_callback' == slack_raw.type ) {
         //the event is wrapped in metadata
