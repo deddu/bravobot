@@ -1,0 +1,15 @@
+{
+  "name": "bravo-bot",
+  "version": "1.0.0",
+  "description": "bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7"
+  },
+  "author": "Andrea Cadeddu",
+  "license": "ISC"
+}
