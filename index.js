@@ -11,7 +11,8 @@ const points = {
     hankey:-1,
     shit:-1,
     poop:-1,
-    lemon:-1
+    lemon:-1,
+    raisins:-1
 }
 
 const update_record = (chan, who, how_much) => {
